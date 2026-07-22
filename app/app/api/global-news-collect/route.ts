@@ -112,6 +112,14 @@ function normalizeRawPayload(
 }
 
 export async function GET(request: NextRequest) {
+  return handleRequest(request);
+}
+
+export async function POST(request: NextRequest) {
+  return handleRequest(request);
+}
+
+async function handleRequest(request: NextRequest) {
   try {
     if (!isAuthorized(request)) {
       return NextResponse.json(
