@@ -122,7 +122,7 @@ export async function GET() {
           documentType: "article",
           title: item.title,
           authorText: item.source,
-          languageCode: item.language ?? null,
+         languageCode: item.language ?? undefined,
           contentType: "application/json",
           publishedAt: item.publishedAt,
           rawText: item.summary ?? item.title,
