@@ -1,10 +1,22 @@
-import { NextResponse } from "next/server";
+import { NextRequest, NextResponse } from "next/server";
 import { GdeltNewsProvider } from "../../../collectors/global-news/gdelt-provider";
 import { supabaseAdmin } from "../../../lib/supabase-admin";
 import { saveSignal } from "../../../services/memory-engine";
 
 const SOURCE_TYPE_CODE = "news_api";
 const SOURCE_DOMAIN = "newsdata.io";
+
+function isAuthorized(request: NextRequest): boolean {
+  const cronSecret = process.env.CRON_SECRET;
+
+  if (!cronSecret) {
+    throw new Error("CRON_SECRET is missing from environment variables.");
+  }
+
+  const suppliedSecret = request.headers.get("x-cron-secret");
+
+  return suppliedSecret === cronSecret;
+}
 
 async function getNewsDataSourceId(): Promise<string> {
   const { data: sourceType, error: sourceTypeError } =
@@ -99,8 +111,18 @@ function normalizeRawPayload(
   return { value: raw };
 }
 
-export async function GET() {
+export async function GET(request: NextRequest) {
   try {
+    if (!isAuthorized(request)) {
+      return NextResponse.json(
+        {
+          success: false,
+          error: "Unauthorized",
+        },
+        { status: 401 },
+      );
+    }
+
     const sourceId = await getNewsDataSourceId();
 
     const provider = new GdeltNewsProvider();
@@ -108,6 +130,7 @@ export async function GET() {
 
     let created = 0;
     let alreadyExists = 0;
+
     const failures: Array<{
       url: string;
       error: string;
@@ -122,7 +145,7 @@ export async function GET() {
           documentType: "article",
           title: item.title,
           authorText: item.source,
-         languageCode: item.language ?? undefined,
+          languageCode: item.language ?? undefined,
           contentType: "application/json",
           publishedAt: item.publishedAt,
           rawText: item.summary ?? item.title,
