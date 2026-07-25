@@ -10,11 +10,12 @@ jobs:
     runs-on: ubuntu-latest
 
     steps:
-      - name: Collect News
+       - name: Collect News
         run: |
-          curl -fsS \
-          -H "x-cron-secret: ${{ secrets.CRON_SECRET }}" \
-          "${{ secrets.WORLD_SIGNAL_URL }}/api/global-news-collect"
+          echo "Running collector..."
+          curl --fail --show-error --location \
+            --header "x-cron-secret: ${{ secrets.CRON_SECRET }}" \
+            "${{ secrets.WORLD_SIGNAL_URL }}/api/global-news-collect"
 
       - name: Wait
         run: sleep 20
