@@ -10,7 +10,7 @@ jobs:
     runs-on: ubuntu-latest
 
     steps:
-       - name: Collect News
+      - name: Collect News
         run: |
           echo "Running collector..."
           curl --fail --show-error --location \
@@ -22,15 +22,15 @@ jobs:
 
       - name: Extract Events
         run: |
-          curl -fsS \
-          -H "x-cron-secret: ${{ secrets.CRON_SECRET }}" \
-          "${{ secrets.WORLD_SIGNAL_URL }}/api/event-extract?limit=20"
+          curl --fail --show-error --location \
+            --header "x-cron-secret: ${{ secrets.CRON_SECRET }}" \
+            "${{ secrets.WORLD_SIGNAL_URL }}/api/event-extract?limit=20"
 
       - name: Wait Again
         run: sleep 20
 
       - name: Extract Entities
         run: |
-          curl -fsS \
-          -H "x-cron-secret: ${{ secrets.CRON_SECRET }}" \
-          "${{ secrets.WORLD_SIGNAL_URL }}/api/entity-extract?limit=20"
+          curl --fail --show-error --location \
+            --header "x-cron-secret: ${{ secrets.CRON_SECRET }}" \
+            "${{ secrets.WORLD_SIGNAL_URL }}/api/entity-extract?limit=20"
