@@ -9,3 +9,4 @@ app/.next/
 app/.env
 app/.env.*
 !app/.env.example
+.vercel

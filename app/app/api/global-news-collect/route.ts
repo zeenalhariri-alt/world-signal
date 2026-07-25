@@ -4,7 +4,8 @@ import { supabaseAdmin } from "../../../lib/supabase-admin";
 import { saveSignal } from "../../../services/memory-engine";
 
 const SOURCE_TYPE_CODE = "news_api";
-const SOURCE_DOMAIN = "newsdata.io";
+const SOURCE_DOMAIN = "gdeltproject.org";
+const SOURCE_NAME = "GDELT Project";
 
 function isAuthorized(request: NextRequest): boolean {
   const cronSecret = process.env.CRON_SECRET;
@@ -20,7 +21,7 @@ function isAuthorized(request: NextRequest): boolean {
   return suppliedSecret === cronSecret;
 }
 
-async function getNewsDataSourceId(): Promise<string> {
+async function getGdeltSourceId(): Promise<string> {
   const { data: sourceType, error: sourceTypeError } =
     await supabaseAdmin
       .schema("core")
@@ -89,8 +90,8 @@ async function getNewsDataSourceId(): Promise<string> {
       .from("sources")
       .insert({
         source_type_id: sourceTypeId,
-        name: "NewsData.io",
-        legal_name: "NewsData.io",
+        name: SOURCE_NAME,
+        legal_name: SOURCE_NAME,
         domain: SOURCE_DOMAIN,
       })
       .select("id")
@@ -122,7 +123,9 @@ function normalizeRawPayload(
     return raw as Record<string, unknown>;
   }
 
-  return { value: raw };
+  return {
+    value: raw,
+  };
 }
 
 async function handleRequest(request: NextRequest) {
@@ -133,11 +136,13 @@ async function handleRequest(request: NextRequest) {
           success: false,
           error: "Unauthorized",
         },
-        { status: 401 },
+        {
+          status: 401,
+        },
       );
     }
 
-    const sourceId = await getNewsDataSourceId();
+    const sourceId = await getGdeltSourceId();
 
     const provider = new GdeltNewsProvider();
     const items = await provider.fetchLatest();
@@ -167,6 +172,7 @@ async function handleRequest(request: NextRequest) {
           metadata: {
             provider: provider.name,
             originalSource: item.source,
+            collector: "gdelt",
           },
         });
 
@@ -181,7 +187,7 @@ async function handleRequest(request: NextRequest) {
           error:
             error instanceof Error
               ? error.message
-              : "Unknown error",
+              : "Unknown item collection error",
         });
       }
     }
@@ -189,6 +195,7 @@ async function handleRequest(request: NextRequest) {
     return NextResponse.json({
       success: true,
       provider: provider.name,
+      sourceId,
       fetched: items.length,
       created,
       alreadyExists,
@@ -202,9 +209,11 @@ async function handleRequest(request: NextRequest) {
         error:
           error instanceof Error
             ? error.message
-            : "Unknown error",
+            : "Unknown global news collection error",
       },
-      { status: 500 },
+      {
+        status: 500,
+      },
     );
   }
 }
