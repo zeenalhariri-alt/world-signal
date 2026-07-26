@@ -4,8 +4,13 @@ import { supabaseAdmin } from "../../../lib/supabase-admin";
 import { saveSignal } from "../../../services/memory-engine";
 
 const SOURCE_TYPE_CODE = "news_api";
-const SOURCE_DOMAIN = "gdeltproject.org";
-const SOURCE_NAME = "GDELT Project";
+const SOURCE_DOMAIN = "newsdata.io";
+const SOURCE_NAME = "NewsData.io";
+
+type TargetCountry = {
+  countryCode?: string;
+  countryName?: string;
+};
 
 function isAuthorized(request: NextRequest): boolean {
   const cronSecret = process.env.CRON_SECRET;
@@ -21,7 +26,7 @@ function isAuthorized(request: NextRequest): boolean {
   return suppliedSecret === cronSecret;
 }
 
-async function getGdeltSourceId(): Promise<string> {
+async function getNewsDataSourceId(): Promise<string> {
   const { data: sourceType, error: sourceTypeError } =
     await supabaseAdmin
       .schema("core")
@@ -128,6 +133,73 @@ function normalizeRawPayload(
   };
 }
 
+function readTargetCountry(raw: unknown): TargetCountry {
+  if (
+    typeof raw !== "object" ||
+    raw === null ||
+    Array.isArray(raw)
+  ) {
+    return {};
+  }
+
+  const rawObject = raw as Record<string, unknown>;
+  const worldSignal = rawObject.worldSignal;
+
+  if (
+    typeof worldSignal !== "object" ||
+    worldSignal === null ||
+    Array.isArray(worldSignal)
+  ) {
+    return {};
+  }
+
+  const worldSignalData =
+    worldSignal as Record<string, unknown>;
+
+  const countryCode =
+    typeof worldSignalData.targetCountryCode === "string"
+      ? worldSignalData.targetCountryCode.trim().toUpperCase()
+      : undefined;
+
+  const countryName =
+    typeof worldSignalData.targetCountryName === "string"
+      ? worldSignalData.targetCountryName.trim()
+      : undefined;
+
+  return {
+    countryCode:
+      countryCode && countryCode.length > 0
+        ? countryCode
+        : undefined,
+    countryName:
+      countryName && countryName.length > 0
+        ? countryName
+        : undefined,
+  };
+}
+
+function createMetadata(
+  providerName: string,
+  originalSource: string,
+  targetCountry: TargetCountry,
+): Record<string, unknown> {
+  const metadata: Record<string, unknown> = {
+    provider: providerName,
+    originalSource,
+    collector: "newsdata-country",
+  };
+
+  if (targetCountry.countryCode) {
+    metadata.countryCode = targetCountry.countryCode;
+  }
+
+  if (targetCountry.countryName) {
+    metadata.countryName = targetCountry.countryName;
+  }
+
+  return metadata;
+}
+
 async function handleRequest(request: NextRequest) {
   try {
     if (!isAuthorized(request)) {
@@ -142,13 +214,16 @@ async function handleRequest(request: NextRequest) {
       );
     }
 
-    const sourceId = await getGdeltSourceId();
+    const sourceId = await getNewsDataSourceId();
 
     const provider = new GdeltNewsProvider();
     const items = await provider.fetchLatest();
 
     let created = 0;
     let alreadyExists = 0;
+    let syriaItems = 0;
+    let belgiumItems = 0;
+    let unknownCountryItems = 0;
 
     const failures: Array<{
       url: string;
@@ -157,6 +232,16 @@ async function handleRequest(request: NextRequest) {
 
     for (const item of items) {
       try {
+        const targetCountry = readTargetCountry(item.raw);
+
+        if (targetCountry.countryCode === "SY") {
+          syriaItems += 1;
+        } else if (targetCountry.countryCode === "BE") {
+          belgiumItems += 1;
+        } else {
+          unknownCountryItems += 1;
+        }
+
         const result = await saveSignal({
           sourceId,
           externalId: item.id,
@@ -169,11 +254,11 @@ async function handleRequest(request: NextRequest) {
           publishedAt: item.publishedAt,
           rawText: item.summary ?? item.title,
           rawPayload: normalizeRawPayload(item.raw),
-          metadata: {
-            provider: provider.name,
-            originalSource: item.source,
-            collector: "gdelt",
-          },
+          metadata: createMetadata(
+            provider.name,
+            item.source,
+            targetCountry,
+          ),
         });
 
         if (result.status === "created") {
@@ -197,6 +282,11 @@ async function handleRequest(request: NextRequest) {
       provider: provider.name,
       sourceId,
       fetched: items.length,
+      countries: {
+        Syria: syriaItems,
+        Belgium: belgiumItems,
+        unknown: unknownCountryItems,
+      },
       created,
       alreadyExists,
       failed: failures.length,
