@@ -25,7 +25,7 @@ async function handleRequest(request: NextRequest) {
       );
     }
 
-    const result = await extractPendingEvents(20);
+    const result = await extractPendingEvents(100);
 
     return NextResponse.json({
       success: true,
