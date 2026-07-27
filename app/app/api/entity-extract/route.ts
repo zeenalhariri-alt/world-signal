@@ -15,7 +15,7 @@ function readLimit(request: NextRequest): number {
   const rawLimit = request.nextUrl.searchParams.get("limit");
 
   if (rawLimit === null) {
-    return 50;
+    return 20;
   }
 
   const limit = Number(rawLimit);
