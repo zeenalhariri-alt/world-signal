@@ -780,7 +780,7 @@ export async function extractEntitiesFromEvents(
 
   const { data, error } = await supabaseAdmin
     .schema("core")
-    .from("extracted_events")
+    .from("pending_extracted_events")
     .select(
       [
         "id",
