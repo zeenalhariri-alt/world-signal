@@ -1,42 +1,29 @@
-name: World Signal Scheduler
-
-on:
-  schedule:
-    - cron: "*/15 * * * *"
-  workflow_dispatch:
-
-jobs:
-  world-signal:
-    runs-on: ubuntu-latest
-
-    steps:
-      - name: Collect News
-        run: |
-          echo "Running collector..."
-          curl --fail --show-error --location \
-            --header "x-cron-secret: ${{ secrets.CRON_SECRET }}" \
-            "${{ secrets.WORLD_SIGNAL_URL }}/api/global-news-collect"
-
-      - name: Wait
-        run: sleep 20
-
-      - name: Extract Events
+      - name: Extract Entities Batch 1
         run: |
           curl --fail --show-error --location \
             --header "x-cron-secret: ${{ secrets.CRON_SECRET }}" \
-            "${{ secrets.WORLD_SIGNAL_URL }}/api/event-extract?limit=20"
+            "${{ secrets.WORLD_SIGNAL_URL }}/api/entity-extract?limit=20"
 
-      - name: Wait Again
-        run: sleep 20
-
-      - name: Extract Entities
+      - name: Extract Entities Batch 2
         run: |
-          for i in 1 2 3 4 5; do
-            echo "Entity extraction batch $i"
+          curl --fail --show-error --location \
+            --header "x-cron-secret: ${{ secrets.CRON_SECRET }}" \
+            "${{ secrets.WORLD_SIGNAL_URL }}/api/entity-extract?limit=20"
 
-            curl --fail --show-error --location \
-              --header "x-cron-secret: ${{ secrets.CRON_SECRET }}" \
-              "${{ secrets.WORLD_SIGNAL_URL }}/api/entity-extract?limit=20"
+      - name: Extract Entities Batch 3
+        run: |
+          curl --fail --show-error --location \
+            --header "x-cron-secret: ${{ secrets.CRON_SECRET }}" \
+            "${{ secrets.WORLD_SIGNAL_URL }}/api/entity-extract?limit=20"
 
-            sleep 2
-          done
+      - name: Extract Entities Batch 4
+        run: |
+          curl --fail --show-error --location \
+            --header "x-cron-secret: ${{ secrets.CRON_SECRET }}" \
+            "${{ secrets.WORLD_SIGNAL_URL }}/api/entity-extract?limit=20"
+
+      - name: Extract Entities Batch 5
+        run: |
+          curl --fail --show-error --location \
+            --header "x-cron-secret: ${{ secrets.CRON_SECRET }}" \
+            "${{ secrets.WORLD_SIGNAL_URL }}/api/entity-extract?limit=20"
