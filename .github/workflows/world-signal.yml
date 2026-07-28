@@ -1,3 +1,34 @@
+name: World Signal Scheduler
+
+on:
+  schedule:
+    - cron: "*/15 * * * *"
+  workflow_dispatch:
+
+jobs:
+  world-signal:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Collect News
+        run: |
+          echo "Running collector..."
+          curl --fail --show-error --location \
+            --header "x-cron-secret: ${{ secrets.CRON_SECRET }}" \
+            "${{ secrets.WORLD_SIGNAL_URL }}/api/global-news-collect"
+
+      - name: Wait
+        run: sleep 20
+
+      - name: Extract Events
+        run: |
+          curl --fail --show-error --location \
+            --header "x-cron-secret: ${{ secrets.CRON_SECRET }}" \
+            "${{ secrets.WORLD_SIGNAL_URL }}/api/event-extract?limit=20"
+
+      - name: Wait Again
+        run: sleep 20
+
       - name: Extract Entities Batch 1
         run: |
           curl --fail --show-error --location \
