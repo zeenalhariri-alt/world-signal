@@ -29,15 +29,14 @@ jobs:
       - name: Wait Again
         run: sleep 20
 
-- name: Extract Entities
-  run: |
-    for i in 1 2 3 4 5
-    do
-      echo "Entity extraction batch $i"
+      - name: Extract Entities
+        run: |
+          for i in 1 2 3 4 5; do
+            echo "Entity extraction batch $i"
 
-      curl --fail --show-error --location \
-        --header "x-cron-secret: ${{ secrets.CRON_SECRET }}" \
-        "${{ secrets.WORLD_SIGNAL_URL }}/api/entity-extract?limit=20"
+            curl --fail --show-error --location \
+              --header "x-cron-secret: ${{ secrets.CRON_SECRET }}" \
+              "${{ secrets.WORLD_SIGNAL_URL }}/api/entity-extract?limit=20"
 
-      sleep 2
-    done
+            sleep 2
+          done
